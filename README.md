@@ -1,6 +1,6 @@
-# Hướng Dẫn Cài Đặt Antigravity CLI (`agy`) Ngoại Tuyến / Di Động (Portable)
+# Hướng Dẫn Cài Đặt & Kiểm Tra Mạng Cho Antigravity CLI (`agy`)
 
-Tài liệu này hướng dẫn cách đưa gói cài đặt `agy` sang máy tính khác (kể cả máy bị chặn không tải được trực tiếp từ website `antigravity.google`).
+Tài liệu này hướng dẫn cách kiểm tra quyền truy cập mạng, kiểm tra whitelist firewall/proxy và cài đặt `agy` ngoại tuyến / di động (Portable) trên máy mới.
 
 ---
 
@@ -9,79 +9,97 @@ Tài liệu này hướng dẫn cách đưa gói cài đặt `agy` sang máy tí
 ```text
 agy_zip/
 ├── bin/
-│   └── agy.exe         # File thực thi chính của Antigravity CLI (~184MB)
-├── install.ps1         # Script cài đặt tự động bằng PowerShell
-├── install.bat         # Script cài đặt tự động bằng Command Prompt (hoặc click đúp)
-└── README.md           # Hướng dẫn chi tiết này
+│   └── agy.exe                   # File thực thi chính của Antigravity CLI (~184MB)
+├── check_connection.ps1          # Script test kết nối TRỰC TIẾP (Không qua Proxy)
+├── check_connection_proxy.ps1    # Script test kết nối CÓ PROXY
+├── install.ps1                   # Script cài đặt tự động bằng PowerShell
+├── install.bat                   # Script cài đặt tự động bằng Command Prompt (click đúp)
+└── README.md                     # Tài liệu hướng dẫn này
 ```
 
 ---
 
-## 2. Cách cài đặt trên máy mới
+## 2. Checklist Các Kết Nối Mạng Cần Thiết (Whitelist)
 
-Bạn có thể chọn **Cách 1 (Tự động - Khuyên dùng)** hoặc **Cách 2 (Thủ công)**:
+Trước khi cài đặt, hãy đảm bảo hệ thống mạng / firewall / proxy của bạn cho phép truy cập tới các domain sau qua **Port 443 (HTTPS)**:
 
-### Cách 1: Cài đặt tự động (Nhanh nhất)
+| Nhóm chức năng | Domain / Hostname | Mục đích | Bắt buộc |
+| :--- | :--- | :--- | :---: |
+| **Xác thực (OAuth2)** | `accounts.google.com` | Giao diện đăng nhập Google trên trình duyệt | ✅ |
+| | `oauth2.googleapis.com` | Cấp và làm mới Token xác thực | ✅ |
+| | `auth.cloud.google` | Xác thực dịch vụ Google Cloud | ✅ |
+| | `sts.googleapis.com` | Google Security Token Service | ✅ |
+| **AI & Backend** | `antigravity.google` | Máy chủ nền tảng Antigravity | ✅ |
+| | `cloudcode-pa.googleapis.com` | Gateway API xử lý Agent & Code Assist | ✅ |
+| | `generativelanguage.googleapis.com` | Gemini API Backend | ✅ |
+| | `aicode.googleapis.com` | AI Code Generation API | ✅ |
+| | `aiplatform.googleapis.com` | Vertex AI API (Doanh nghiệp / GCP) | ✅ |
+| | `www.googleapis.com` | Google APIs Gateway chung | ✅ |
+| **Tài nguyên tĩnh** | `www.gstatic.com` | Tải script / giao diện đăng nhập Google | ✅ |
+| | `safebrowsing.googleapis.com` | Kiểm tra an toàn bảo mật web | Tuỳ chọn |
 
-#### Cách A: Chạy file `.bat`
-* Nhấp đúp chuột vào file `install.bat` (hoặc chuột phải chọn **Run as administrator** nếu cần).
-* Chờ script hoàn tất và nhấn phím bất kỳ để đóng.
-
-#### Cách B: Chạy qua PowerShell
-1. Mở PowerShell trong thư mục `agy_zip`.
-2. Chạy lệnh:
-   ```powershell
-   .\install.ps1
-   ```
-*(Nếu gặp lỗi Execution Policy, chạy lệnh: `powershell -ExecutionPolicy Bypass -File .\install.ps1`)*
-
----
-
-### Cách 2: Cài đặt thủ công (Manual)
-
-Nếu bạn không muốn chạy script tự động, hãy làm theo 3 bước sau:
-
-1. **Tạo thư mục đích:**
-   * Mở File Explorer, truy cập vào đường dẫn:
-     ```text
-     %LOCALAPPDATA%\agy\bin
-     ```
-     *(Thường là `C:\Users\<Tên_User>\AppData\Local\agy\bin` — nếu chưa có thư mục thì tự tạo mới).*
-
-2. **Sao chép file:**
-   * Copy file `bin\agy.exe` từ gói này dán vào thư mục `%LOCALAPPDATA%\agy\bin\`.
-
-3. **Thêm vào biến môi trường PATH:**
-   * Nhấn phím `Win + S` -> Gõ **Environment Variables** -> Chọn **Edit environment variables for your account**.
-   * Trong phần **User variables**, chọn dòng `Path` -> Bấm **Edit** -> Bấm **New**.
-   * Thêm đường dẫn: `%LOCALAPPDATA%\agy\bin` (hoặc đường dẫn đầy đủ dạng `C:\Users\<Tên_User>\AppData\Local\agy\bin`).
-   * Bấm **OK** để lưu lại.
+> **Lưu ý:**
+> * Cổng mạng: **443 (HTTPS)** và **80 (HTTP)**.
+> * Cần hỗ trợ **HTTP/2** hoặc **gRPC streaming** để nhận phản hồi theo thời gian thực từ AI.
+> * Cần cho phép mở port local tạm thời trên `127.0.0.1` để trình duyệt trả OAuth token về CLI.
 
 ---
 
-## 3. Khởi động và Đăng nhập
+## 3. Kiểm Tra Kết Nối Mạng (Pre-flight Network Check)
 
-1. Mở một cửa sổ **PowerShell** hoặc **Command Prompt (CMD)** **MỚI** (để nhận PATH mới).
-2. Gõ lệnh:
+Trước khi cài đặt, hãy chạy 1 trong 2 script sau trong PowerShell để biết mạng của bạn có bị chặn domain nào hay không:
+
+### Trường hợp A: Mạng kết nối trực tiếp (Không dùng Proxy)
+Mở PowerShell trong thư mục này và chạy:
+```powershell
+.\check_connection.ps1
+```
+*(Hoặc: `powershell -ExecutionPolicy Bypass -File .\check_connection.ps1`)*
+
+### Trường hợp B: Mạng doanh nghiệp có dùng Proxy
+Mở PowerShell và chạy:
+```powershell
+.\check_connection_proxy.ps1
+```
+Script sẽ yêu cầu bạn nhập địa chỉ Proxy (Ví dụ: `http://proxy.company.com:8080`).
+
+---
+
+## 4. Hướng Dẫn Cài Đặt Trên Máy Mới
+
+### Cách 1: Tự động (Khuyên dùng)
+* **Cách nhanh nhất:** Nhấp đúp chuột vào file `install.bat`.
+* **Hoặc bằng PowerShell:**
+  ```powershell
+  .\install.ps1
+  ```
+  *(Script sẽ tự động copy `agy.exe` vào `%LOCALAPPDATA%\agy\bin` và cấu hình biến môi trường `PATH`).*
+
+### Cách 2: Cài đặt thủ công
+1. Tạo thư mục: `%LOCALAPPDATA%\agy\bin` (tức `C:\Users\<User>\AppData\Local\agy\bin`).
+2. Copy file `bin\agy.exe` vào thư mục vừa tạo.
+3. Thêm đường dẫn `%LOCALAPPDATA%\agy\bin` vào biến môi trường `PATH` của tài khoản (User Environment Variables).
+
+---
+
+## 5. Khởi Động & Đăng Nhập
+
+1. Mở một cửa sổ **PowerShell** hoặc **CMD** **MỚI**.
+2. Kiểm tra phiên bản:
    ```cmd
    agy --version
    ```
-   để kiểm tra phiên bản.
-3. Gõ lệnh:
+3. Khởi động CLI:
    ```cmd
    agy
    ```
-   để bắt đầu phiên làm việc.
-4. **Đăng nhập:** Ở lần chạy đầu tiên, màn hình terminal sẽ hiển thị hướng dẫn xác thực tài khoản Google (OAuth) qua trình duyệt. Hãy làm theo hướng dẫn để đăng nhập.
+4. Ở lần đầu chạy, terminal sẽ hiển thị link xác thực đăng nhập Google. Hãy làm theo hướng dẫn trên màn hình.
 
 ---
 
-## 4. Xử lý sự cố mạng & Proxy (Dành cho mạng doanh nghiệp / Firewall)
+## 6. Cấu Hình Proxy Khi Sử Dụng (Nếu Có)
 
-`agy` là CLI giao tiếp với Google backend (Gemini / Antigravity Cloud). Do đó máy tính cần có kết nối ra internet để gửi/nhận phản hồi AI.
-
-### Trường hợp mạng dùng Proxy:
-Nếu máy của bạn sử dụng Corporate Proxy để ra ngoài Internet, hãy đặt biến môi trường Proxy trước khi chạy:
+Nếu mạng của bạn cần Proxy để ra Internet, hãy set biến môi trường trước khi chạy `agy`:
 
 **Trên PowerShell:**
 ```powershell
@@ -90,19 +108,9 @@ $env:HTTPS_PROXY = "http://proxy.company.com:8080"
 agy
 ```
 
-**Trên CMD:**
+**Trên Command Prompt (CMD):**
 ```cmd
 set HTTP_PROXY=http://proxy.company.com:8080
 set HTTPS_PROXY=http://proxy.company.com:8080
 agy
 ```
-
-*(Hoặc cấu hình vĩnh viễn trong User Environment Variables).*
-
----
-
-## 5. Một số thao tác nhanh trong CLI
-
-* **Thoát CLI:** Nhấn `Ctrl + D` hai lần hoặc gõ `/exit` / `/quit`.
-* **Trợ giúp:** Gõ `/help` trong CLI để xem tất cả các slash commands có sẵn.
-* **Xem tham số CLI:** Gõ `agy --help` ngoài terminal.
