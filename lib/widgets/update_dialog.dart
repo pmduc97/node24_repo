@@ -102,7 +102,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               ),
               child: Text(
                 widget.updateInfo.releaseNotes,
-                style: const TextStyle(color: Colors.white90, fontSize: 13, height: 1.4),
+                style: const TextStyle(color: Colors.white87, fontSize: 13, height: 1.4),
               ),
             ),
             const SizedBox(height: 16),
