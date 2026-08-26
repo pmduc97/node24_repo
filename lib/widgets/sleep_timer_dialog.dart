@@ -12,6 +12,12 @@ class SleepTimerDialog extends StatefulWidget {
 class _SleepTimerDialogState extends State<SleepTimerDialog> {
   final TextEditingController _customController = TextEditingController();
 
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
+  }
+
   void _setTimer(BuildContext context, int minutes) {
     final playerService = Provider.of<AudioPlayerService>(context, listen: false);
     playerService.setSleepTimer(minutes);

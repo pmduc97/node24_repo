@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,8 +7,15 @@ import 'services/audio_player_service.dart';
 import 'widgets/playlist_view.dart';
 import 'widgets/player_controls.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock to portrait for a focused music player experience
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -16,16 +24,23 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const VibeMusicApp());
+
+  // Init audio_service — this registers the foreground service
+  // that keeps music alive when screen is off or app is backgrounded.
+  final playerService = await AudioPlayerService.create();
+
+  runApp(VibeMusicApp(playerService: playerService));
 }
 
 class VibeMusicApp extends StatelessWidget {
-  const VibeMusicApp({super.key});
+  final AudioPlayerService playerService;
+
+  const VibeMusicApp({super.key, required this.playerService});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AudioPlayerService(),
+    return ChangeNotifierProvider<AudioPlayerService>.value(
+      value: playerService,
       child: MaterialApp(
         title: 'Vibe Music Player',
         debugShowCheckedModeBanner: false,
@@ -34,6 +49,12 @@ class VibeMusicApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFF0F111A),
           textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           useMaterial3: true,
+          // Remove Material3 dynamic color to keep consistent dark theme
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFFE94057),
+            secondary: Color(0xFFF27121),
+            surface: Color(0xFF1E222D),
+          ),
         ),
         home: const MusicPlayerHomeScreen(),
       ),
@@ -81,18 +102,22 @@ class MusicPlayerHomeScreen extends StatelessWidget {
                 context: context,
                 applicationName: 'Vibe Music Player',
                 applicationVersion: '1.0.0',
-                applicationIcon: const Icon(Icons.music_note, color: Color(0xFFE94057), size: 36),
+                applicationIcon: const Icon(
+                  Icons.music_note,
+                  color: Color(0xFFE94057),
+                  size: 36,
+                ),
                 children: const [
-                  Text('Ứng dụng nghe nhạc Offline cho Android nhẹ nhàng, nhanh chóng và mượt mà.'),
+                  Text('Ứng dụng nghe nhạc Offline cho Android.\nNhẹ nhàng, nhanh chóng và mượt mà.'),
                 ],
               );
             },
           ),
         ],
       ),
-      body: SafeArea(
+      body: const SafeArea(
         child: Column(
-          children: const [
+          children: [
             Expanded(child: PlaylistView()),
             PlayerControls(),
           ],

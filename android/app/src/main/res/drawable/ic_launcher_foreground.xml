@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vibe Music foreground icon: equalizer bars with gradient effect -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left bar (short) -->
+    <path
+        android:pathData="M28,68 L36,68 L36,80 L28,80 Z"
+        android:fillColor="#E94057"/>
+
+    <!-- Center-left bar (medium) -->
+    <path
+        android:pathData="M40,50 L48,50 L48,80 L40,80 Z"
+        android:fillColor="#EE5A3A"/>
+
+    <!-- Center bar (tall) -->
+    <path
+        android:pathData="M52,30 L60,30 L60,80 L52,80 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="56"
+                android:startY="30"
+                android:endX="56"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#E94057"/>
+                <item android:offset="1" android:color="#F27121"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Center-right bar (medium-tall) -->
+    <path
+        android:pathData="M64,42 L72,42 L72,80 L64,80 Z"
+        android:fillColor="#F09030"/>
+
+    <!-- Right bar (short-medium) -->
+    <path
+        android:pathData="M76,58 L84,58 L84,80 L76,80 Z"
+        android:fillColor="#F27121"/>
+
+    <!-- Sound wave dots on top of bars -->
+    <path
+        android:pathData="M32,65 A2,2 0,0,1 32,61 A2,2 0,0,1 32,65 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <path
+        android:pathData="M44,47 A2,2 0,0,1 44,43 A2,2 0,0,1 44,47 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <path
+        android:pathData="M56,27 A2,2 0,0,1 56,23 A2,2 0,0,1 56,27 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <path
+        android:pathData="M68,39 A2,2 0,0,1 68,35 A2,2 0,0,1 68,39 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+    <path
+        android:pathData="M80,55 A2,2 0,0,1 80,51 A2,2 0,0,1 80,55 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+</vector>
