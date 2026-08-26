@@ -12,8 +12,8 @@ void main() {
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      navigationBarColor: Color(0xFF161925),
-      navigationBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF161925),
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
   runApp(const VibeMusicApp());

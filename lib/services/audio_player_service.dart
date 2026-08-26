@@ -28,7 +28,7 @@ class AudioPlayerService extends ChangeNotifier {
           ? _playlist[_currentIndex]
           : null;
 
-  bool get isPlaying => _player.isPlaying;
+  bool get isPlaying => _player.playing;
   bool get isShuffleEnabled => _isShuffleEnabled;
   CustomLoopMode get loopMode => _loopMode;
   int get remainingTimerSeconds => _remainingTimerSeconds;
@@ -74,14 +74,13 @@ class AudioPlayerService extends ChangeNotifier {
           await Permission.storage.request().isGranted) {
         return true;
       }
-      // Direct file picker often works without explicit broad permission on Android 13+
       return true;
     }
     return true;
   }
 
   // Pick Multiple Files
-  Future<int> pickFiles() Future<int> async {
+  Future<int> pickFiles() async {
     await requestStoragePermission();
     
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -166,7 +165,7 @@ class AudioPlayerService extends ChangeNotifier {
       return;
     }
 
-    if (_player.isPlaying) {
+    if (_player.playing) {
       await _player.pause();
     } else {
       await _player.play();
@@ -190,7 +189,6 @@ class AudioPlayerService extends ChangeNotifier {
     if (_playlist.isEmpty) return;
 
     if (_player.position.inSeconds > 3) {
-      // If played more than 3 seconds, restart current track
       await _player.seek(Duration.zero);
       return;
     }
