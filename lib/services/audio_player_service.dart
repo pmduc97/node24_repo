@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:file_picker/file_picker.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -160,7 +161,7 @@ class AudioPlayerService extends ChangeNotifier {
         androidNotificationChannelName: 'Vibe Music Playback',
         androidNotificationOngoing: true,
         androidStopForegroundOnPause: true,
-        notificationColor: 0xFFE94057,
+        notificationColor: const Color(0xFFE94057),
       ),
     );
     return AudioPlayerService(handler);
