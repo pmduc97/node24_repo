@@ -10,6 +10,7 @@ class PlaylistView extends StatelessWidget {
     final playerService = Provider.of<AudioPlayerService>(context);
     final playlist = playerService.playlist;
     final currentIndex = playerService.currentIndex;
+    final isScanning = playerService.isScanning;
 
     return Column(
       children: [
@@ -29,16 +30,33 @@ class PlaylistView extends StatelessWidget {
                       side: const BorderSide(color: Color(0xFF32384A)),
                     ),
                   ),
-                  icon: const Icon(Icons.audio_file, color: Color(0xFFE94057), size: 20),
-                  label: const Text('Chọn File', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onPressed: () async {
-                    int added = await playerService.pickFiles();
-                    if (context.mounted && added > 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Đã thêm $added file nhạc vào danh sách')),
-                      );
-                    }
-                  },
+                  icon: isScanning
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFE94057),
+                          ),
+                        )
+                      : const Icon(Icons.audio_file, color: Color(0xFFE94057), size: 20),
+                  label: Text(
+                    isScanning ? 'Đang quét...' : 'Chọn File',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: isScanning
+                      ? null
+                      : () async {
+                          int added = await playerService.pickFiles();
+                          if (context.mounted && added > 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Đã thêm $added file nhạc vào danh sách'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
                 ),
               ),
               const SizedBox(width: 10),
@@ -53,16 +71,33 @@ class PlaylistView extends StatelessWidget {
                       side: const BorderSide(color: Color(0xFF32384A)),
                     ),
                   ),
-                  icon: const Icon(Icons.folder_open, color: Color(0xFFF27121), size: 20),
-                  label: const Text('Chọn Folder', style: TextStyle(fontWeight: FontWeight.w600)),
-                  onPressed: () async {
-                    int added = await playerService.pickFolder();
-                    if (context.mounted && added > 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Đã tìm thấy & thêm $added bài hát từ folder')),
-                      );
-                    }
-                  },
+                  icon: isScanning
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFF27121),
+                          ),
+                        )
+                      : const Icon(Icons.folder_open, color: Color(0xFFF27121), size: 20),
+                  label: Text(
+                    isScanning ? 'Đang quét...' : 'Chọn Folder',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: isScanning
+                      ? null
+                      : () async {
+                          int added = await playerService.pickFolder();
+                          if (context.mounted && added > 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Đã tìm thấy & thêm $added bài hát từ folder'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
                 ),
               ),
               if (playlist.isNotEmpty) ...[
@@ -70,14 +105,23 @@ class PlaylistView extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_sweep, color: Colors.white54),
                   tooltip: 'Xóa toàn bộ danh sách',
-                  onPressed: () {
-                    playerService.clearPlaylist();
-                  },
+                  onPressed: isScanning ? null : () => playerService.clearPlaylist(),
                 ),
               ],
             ],
           ),
         ),
+
+        // Non-blocking scanning progress line
+        if (isScanning)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: LinearProgressIndicator(
+              backgroundColor: Color(0xFF1E222D),
+              color: Color(0xFFE94057),
+              minHeight: 2,
+            ),
+          ),
 
         // Playlist counter info
         Padding(
@@ -133,7 +177,11 @@ class PlaylistView extends StatelessWidget {
                       const SizedBox(height: 16),
                       const Text(
                         'Chưa có bài hát nào trong danh sách',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Text(

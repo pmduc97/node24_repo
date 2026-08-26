@@ -109,14 +109,14 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 }
 
 // ─────────────────────────────────────────────
-// AudioPlayerService: drives UI state.
-// Initializes AudioService non-blockingly so app
-// opens instantly without black screen.
+// AudioPlayerService: drives UI state with
+// ZERO-FREEZE non-blocking async execution.
 // ─────────────────────────────────────────────
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _fallbackPlayer = AudioPlayer();
   VibeMusicHandler? _handler;
   bool _isAudioServiceReady = false;
+  bool _isScanning = false;
 
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<dynamic>? _customEventSub;
@@ -134,6 +134,7 @@ class AudioPlayerService extends ChangeNotifier {
   // ── Getters ──────────────────────────────────
   List<SongModel> get playlist => List.unmodifiable(_playlist);
   int get currentIndex => _currentIndex;
+  bool get isScanning => _isScanning;
   SongModel? get currentSong =>
       (_currentIndex >= 0 && _currentIndex < _playlist.length)
           ? _playlist[_currentIndex]
@@ -220,64 +221,85 @@ class AudioPlayerService extends ChangeNotifier {
     return true;
   }
 
-  // ── File Picking ──────────────────────────────
+  // ── File Picking (Async non-blocking) ─────────
   Future<int> pickFiles() async {
     await requestStoragePermission();
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['mp3', 'm4a', 'wav', 'flac', 'aac', 'ogg'],
-      allowMultiple: true,
-    );
+    _isScanning = true;
+    notifyListeners();
 
-    if (result != null && result.paths.isNotEmpty) {
-      int addedCount = 0;
-      for (String? path in result.paths) {
-        if (path != null && !_playlist.any((s) => s.path == path)) {
-          _playlist.add(SongModel.fromFilePath(path));
-          addedCount++;
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'm4a', 'wav', 'flac', 'aac', 'ogg'],
+        allowMultiple: true,
+      );
+
+      if (result != null && result.paths.isNotEmpty) {
+        int addedCount = 0;
+        final existingPaths = _playlist.map((s) => s.path).toSet();
+        for (String? path in result.paths) {
+          if (path != null && !existingPaths.contains(path)) {
+            _playlist.add(SongModel.fromFilePath(path));
+            existingPaths.add(path);
+            addedCount++;
+          }
         }
+        if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
+        return addedCount;
       }
-      if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
+    } finally {
+      _isScanning = false;
       notifyListeners();
-      return addedCount;
     }
     return 0;
   }
 
+  // ── Folder Scanning (Async stream, 0 UI freeze) ──
   Future<int> pickFolder() async {
     await requestStoragePermission();
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    if (selectedDirectory != null) {
+    if (selectedDirectory == null) return 0;
+
+    _isScanning = true;
+    notifyListeners();
+
+    int addedCount = 0;
+    try {
       final dir = Directory(selectedDirectory);
-      int addedCount = 0;
-      try {
-        final entities = dir.listSync(recursive: true);
-        const audioExtensions = ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg'];
-        for (var entity in entities) {
-          if (entity is File) {
-            final path = entity.path;
-            if (audioExtensions.any((ext) => path.toLowerCase().endsWith(ext))) {
-              if (!_playlist.any((s) => s.path == path)) {
-                _playlist.add(SongModel.fromFilePath(path));
-                addedCount++;
-              }
+      const audioExtensions = ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg'];
+      final existingPaths = _playlist.map((s) => s.path).toSet();
+
+      // Use async Stream listing (non-blocking vs listSync)
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          final path = entity.path;
+          final lower = path.toLowerCase();
+          if (audioExtensions.any((ext) => lower.endsWith(ext))) {
+            if (!existingPaths.contains(path)) {
+              _playlist.add(SongModel.fromFilePath(path));
+              existingPaths.add(path);
+              addedCount++;
             }
           }
         }
-      } catch (e) {
-        debugPrint('Error scanning folder: $e');
       }
       if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
+    } catch (e) {
+      debugPrint('Error scanning folder: $e');
+    } finally {
+      _isScanning = false;
       notifyListeners();
-      return addedCount;
     }
-    return 0;
+    return addedCount;
   }
 
-  // ── Playback ──────────────────────────────────
+  // ── Playback (Instant UI Feedback) ─────────────
   Future<void> playAtIndex(int index) async {
     if (index < 0 || index >= _playlist.length) return;
     _currentIndex = index;
+    // Update UI instantly on tap
+    notifyListeners();
+
     final song = _playlist[_currentIndex];
     try {
       if (_handler != null) {
