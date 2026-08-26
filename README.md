@@ -3,7 +3,8 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.27.4-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-3.6.0-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-API_21+-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-v1.0.2-E94057?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 Một ứng dụng nghe nhạc **Offline** hiện đại, mượt mà và siêu nhẹ dành cho hệ điều hành **Android**, được phát triển bằng **Flutter** & **Dart**.
 
@@ -13,15 +14,18 @@ Một ứng dụng nghe nhạc **Offline** hiện đại, mượt mà và siêu 
 
 Bạn có thể tải ngay file cài đặt APK bản mới nhất đã được build tự động qua GitHub Actions:
 
-👉 **[Tải VibeMusicApp.apk (Bản Mới Nhất)](https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk)**
+👉 **[Tải VibeMusicApp.apk (Bản v1.0.2 Mới Nhất)](https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk)**
 
 ---
 
-## ✨ Tính Năng Nổi Bật
+## ✨ Tính Năng Nổi Bật (Features)
 
 - 🎵 **Phát Nhạc Offline Đa Định Dạng**: Hỗ trợ MP3, M4A, WAV, FLAC, AAC, OGG, OPUS, WMA, AMR.
-- 📁 **Chọn File & Thư Mục Thông Minh**: Lọc duy nhất các định dạng file âm thanh (`audio/*`), tự động loại bỏ các tập tin không phải nhạc.
+- 📂 **Lọc Chuẩn File Âm Thanh (`audio/*`)**: Tự động lọc sạch 100% các file ảnh, tài liệu, pdf... chỉ hiển thị file nhạc khi chọn File/Folder.
+- 📂 **Quản Lý Playlist Cá Nhân & Bài Hát Yêu Thích ❤️**: Tạo các Playlist tùy chỉnh (*Nhạc Chill, Tập Gym, Nhạc Trẻ...*), thả tim lưu bài hát yêu thích. Lưu trữ dữ liệu JSON bền vững không mất data khi update app.
+- ✏️ **Đổi Tên Hiển Thị Tùy Chỉnh (Long-Press Rename)**: Nhấn giữ bài hát để sửa Tên bài hát & Ca sĩ hiển thị trong app. Lưu dạng Mapping nội bộ, bảo vệ 100% không làm thay đổi file thực trên ổ đĩa.
 - 🌙 **Phát Nhạc Chạy Nền & Màn Hình Khóa (Background Playback)**: Sử dụng `audio_service` hiển thị bảng điều khiển phát nhạc chuyên nghiệp trên thanh thông báo và màn hình khóa.
+- 📱 **Giao Diện Gọn Gàng (Compact View)**: Hiển thị nhiều hơn 40-50% số bài hát trên một màn hình, nhường không gian cho tên file dài.
 - ⚡ **Hiệu Năng Cao & Không Đơ UI (Zero-Freeze)**: Quét thư mục bất đồng bộ dạng Stream (`dir.list`), tra cứu O(1) bằng `Set`, phản hồi cảm ứng 0ms.
 - 🔄 **Tự Động Cập Nhật Trực Tiếp Trong App (In-App Auto Update)**: Tự động kiểm tra phiên bản mới từ GitHub, hiển thị Release Notes và tải/cài đặt APK ngay trong app.
 - ⏰ **Hẹn Giờ Tắt Nhạc (Sleep Timer)**: Cài sẵn các mốc 15, 30, 45, 60 phút hoặc tùy chỉnh số phút theo ý muốn.
