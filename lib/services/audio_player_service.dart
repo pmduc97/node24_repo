@@ -113,7 +113,8 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 // ─────────────────────────────────────────────
 // AudioPlayerService: drives UI state with
 // ZERO-FREEZE non-blocking async execution.
-// Includes Playlists, Favorites & Custom Titles.
+// Includes Playlists, Favorites, Custom Titles &
+// iPod/Spotify Fair Shuffle Deck Algorithm.
 // ─────────────────────────────────────────────
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _fallbackPlayer = AudioPlayer();
@@ -127,6 +128,10 @@ class AudioPlayerService extends ChangeNotifier {
   int _currentIndex = -1;
   bool _isShuffleEnabled = false;
   CustomLoopMode _loopMode = CustomLoopMode.off;
+
+  // Smart Fair Shuffle Deck State
+  final List<int> _shuffleDeck = [];
+  int _shuffleDeckIndex = -1;
 
   Timer? _sleepTimer;
   int _remainingTimerSeconds = 0;
@@ -234,8 +239,8 @@ class AudioPlayerService extends ChangeNotifier {
     if (_playlist.isEmpty) return;
     if (_loopMode == CustomLoopMode.one) {
       _activePlayer.seek(Duration.zero).then((_) => _activePlayer.play());
-    } else if (_currentIndex < _playlist.length - 1) {
-      playAtIndex(_currentIndex + 1);
+    } else if (_currentIndex < _playlist.length - 1 || _isShuffleEnabled) {
+      next();
     } else if (_loopMode == CustomLoopMode.all) {
       playAtIndex(0);
     } else {
@@ -293,6 +298,7 @@ class AudioPlayerService extends ChangeNotifier {
           }
         }
         if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
+        if (_isShuffleEnabled) _generateShuffleDeck();
         return addedCount;
       }
     } finally {
@@ -330,6 +336,7 @@ class AudioPlayerService extends ChangeNotifier {
         }
       }
       if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
+      if (_isShuffleEnabled) _generateShuffleDeck();
     } catch (e) {
       debugPrint('Error scanning folder: $e');
     } finally {
@@ -348,7 +355,6 @@ class AudioPlayerService extends ChangeNotifier {
     };
     await PlaylistStorageService.saveCustomTitles(_customSongTitles);
 
-    // Update in-memory playlist
     for (int i = 0; i < _playlist.length; i++) {
       if (_playlist[i].path == songPath) {
         _playlist[i] = _playlist[i].copyWith(
@@ -358,7 +364,6 @@ class AudioPlayerService extends ChangeNotifier {
       }
     }
 
-    // Update background player notification if active
     if (currentSong?.path == songPath && _handler != null) {
       await _handler!.setMediaItemFromSong(currentSong!);
     }
@@ -369,7 +374,6 @@ class AudioPlayerService extends ChangeNotifier {
     _customSongTitles.remove(songPath);
     await PlaylistStorageService.saveCustomTitles(_customSongTitles);
 
-    // Re-create default SongModel
     for (int i = 0; i < _playlist.length; i++) {
       if (_playlist[i].path == songPath) {
         _playlist[i] = SongModel.fromFilePath(songPath);
@@ -458,8 +462,35 @@ class AudioPlayerService extends ChangeNotifier {
     if (songs.isNotEmpty) {
       _playlist.clear();
       _playlist.addAll(songs);
+      if (_isShuffleEnabled) _generateShuffleDeck();
       playAtIndex(startIndex);
     }
+  }
+
+  // ── Smart Fair Shuffle Deck Algorithm ──────────
+  void _generateShuffleDeck() {
+    _shuffleDeck.clear();
+    if (_playlist.isEmpty) return;
+
+    final indices = List<int>.generate(_playlist.length, (i) => i)..shuffle();
+    _shuffleDeck.addAll(indices);
+
+    // Make sure current song is at index 0 of the shuffle deck
+    if (_currentIndex >= 0 && _currentIndex < _playlist.length) {
+      _shuffleDeck.remove(_currentIndex);
+      _shuffleDeck.insert(0, _currentIndex);
+      _shuffleDeckIndex = 0;
+    } else {
+      _shuffleDeckIndex = 0;
+    }
+  }
+
+  void toggleShuffle() {
+    _isShuffleEnabled = !_isShuffleEnabled;
+    if (_isShuffleEnabled) {
+      _generateShuffleDeck();
+    }
+    notifyListeners();
   }
 
   // ── Playback ──────────────────────────────────
@@ -507,9 +538,31 @@ class AudioPlayerService extends ChangeNotifier {
 
   Future<void> next() async {
     if (_playlist.isEmpty) return;
-    _currentIndex = _isShuffleEnabled
-        ? (List.generate(_playlist.length, (i) => i)..shuffle()).first
-        : (_currentIndex + 1) % _playlist.length;
+
+    if (_isShuffleEnabled) {
+      if (_shuffleDeck.length != _playlist.length) {
+        _generateShuffleDeck();
+      }
+
+      _shuffleDeckIndex++;
+      // When deck is completed, re-shuffle without repeating the last played song
+      if (_shuffleDeckIndex >= _shuffleDeck.length) {
+        final lastSongIndex = _shuffleDeck.isNotEmpty ? _shuffleDeck.last : -1;
+        _shuffleDeck.clear();
+        _shuffleDeck.addAll(List<int>.generate(_playlist.length, (i) => i)..shuffle());
+
+        if (_shuffleDeck.length > 1 && _shuffleDeck.first == lastSongIndex) {
+          final temp = _shuffleDeck[0];
+          _shuffleDeck[0] = _shuffleDeck[1];
+          _shuffleDeck[1] = temp;
+        }
+        _shuffleDeckIndex = 0;
+      }
+      _currentIndex = _shuffleDeck[_shuffleDeckIndex];
+    } else {
+      _currentIndex = (_currentIndex + 1) % _playlist.length;
+    }
+
     await playAtIndex(_currentIndex);
   }
 
@@ -519,9 +572,19 @@ class AudioPlayerService extends ChangeNotifier {
       await seek(Duration.zero);
       return;
     }
-    _currentIndex = _isShuffleEnabled
-        ? (List.generate(_playlist.length, (i) => i)..shuffle()).first
-        : (_currentIndex - 1 + _playlist.length) % _playlist.length;
+
+    if (_isShuffleEnabled && _shuffleDeck.isNotEmpty) {
+      if (_shuffleDeckIndex > 0) {
+        _shuffleDeckIndex--;
+        _currentIndex = _shuffleDeck[_shuffleDeckIndex];
+      } else {
+        _shuffleDeckIndex = _shuffleDeck.length - 1;
+        _currentIndex = _shuffleDeck[_shuffleDeckIndex];
+      }
+    } else {
+      _currentIndex = (_currentIndex - 1 + _playlist.length) % _playlist.length;
+    }
+
     await playAtIndex(_currentIndex);
   }
 
@@ -533,11 +596,6 @@ class AudioPlayerService extends ChangeNotifier {
     }
   }
 
-  void toggleShuffle() {
-    _isShuffleEnabled = !_isShuffleEnabled;
-    notifyListeners();
-  }
-
   void toggleLoopMode() {
     _loopMode = CustomLoopMode.values[(_loopMode.index + 1) % 3];
     notifyListeners();
@@ -547,6 +605,8 @@ class AudioPlayerService extends ChangeNotifier {
     if (index < 0 || index >= _playlist.length) return;
     final isCurrent = (index == _currentIndex);
     _playlist.removeAt(index);
+    if (_isShuffleEnabled) _generateShuffleDeck();
+
     if (_playlist.isEmpty) {
       _handler?.stop() ?? _fallbackPlayer.stop();
       _currentIndex = -1;
@@ -562,6 +622,8 @@ class AudioPlayerService extends ChangeNotifier {
   void clearPlaylist() {
     _handler?.stop() ?? _fallbackPlayer.stop();
     _playlist.clear();
+    _shuffleDeck.clear();
+    _shuffleDeckIndex = -1;
     _currentIndex = -1;
     notifyListeners();
   }
@@ -570,6 +632,8 @@ class AudioPlayerService extends ChangeNotifier {
     if (oldIndex < newIndex) newIndex -= 1;
     final item = _playlist.removeAt(oldIndex);
     _playlist.insert(newIndex, item);
+    if (_isShuffleEnabled) _generateShuffleDeck();
+
     if (_currentIndex == oldIndex) {
       _currentIndex = newIndex;
     } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
