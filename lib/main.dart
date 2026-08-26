@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,11 +6,11 @@ import 'services/audio_player_service.dart';
 import 'widgets/playlist_view.dart';
 import 'widgets/player_controls.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait for a focused music player experience
-  await SystemChrome.setPreferredOrientations([
+  // Preferred portrait orientation
+  SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
@@ -25,22 +24,16 @@ void main() async {
     ),
   );
 
-  // Init audio_service — this registers the foreground service
-  // that keeps music alive when screen is off or app is backgrounded.
-  final playerService = await AudioPlayerService.create();
-
-  runApp(VibeMusicApp(playerService: playerService));
+  runApp(const VibeMusicApp());
 }
 
 class VibeMusicApp extends StatelessWidget {
-  final AudioPlayerService playerService;
-
-  const VibeMusicApp({super.key, required this.playerService});
+  const VibeMusicApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AudioPlayerService>.value(
-      value: playerService,
+    return ChangeNotifierProvider<AudioPlayerService>(
+      create: (_) => AudioPlayerService(),
       child: MaterialApp(
         title: 'Vibe Music Player',
         debugShowCheckedModeBanner: false,
@@ -49,7 +42,6 @@ class VibeMusicApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFF0F111A),
           textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           useMaterial3: true,
-          // Remove Material3 dynamic color to keep consistent dark theme
           colorScheme: const ColorScheme.dark(
             primary: Color(0xFFE94057),
             secondary: Color(0xFFF27121),

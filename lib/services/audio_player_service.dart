@@ -12,15 +12,14 @@ enum CustomLoopMode { off, all, one }
 
 // ─────────────────────────────────────────────
 // AudioHandler: required by audio_service to
-// keep playback alive in the background and
-// show media notification on lock screen.
+// keep playback alive in background & lockscreen.
 // ─────────────────────────────────────────────
 class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   StreamSubscription<PlayerState>? _playerStateSub;
 
   VibeMusicHandler() {
-    _player.playerStateStream.listen(_broadcastState);
+    _playerStateSub = _player.playerStateStream.listen(_broadcastState);
     _player.positionStream.listen((pos) {
       playbackState.add(playbackState.value.copyWith(updatePosition: pos));
     });
@@ -41,7 +40,7 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       ProcessingState.buffering: AudioProcessingState.buffering,
       ProcessingState.ready: AudioProcessingState.ready,
       ProcessingState.completed: AudioProcessingState.completed,
-    }[ps.processingState]!;
+    }[ps.processingState] ?? AudioProcessingState.idle;
 
     playbackState.add(playbackState.value.copyWith(
       controls: [
@@ -90,7 +89,6 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-    // Signal handled by AudioPlayerService
     customEvent.add('next');
   }
 
@@ -104,21 +102,22 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     await _player.play();
   }
 
-  @override
-  Future<void> dispose() async {
+  Future<void> disposeHandler() async {
     await _playerStateSub?.cancel();
     await _player.dispose();
-    super.noSuchMethod(Invocation.method(#dispose, []));
   }
 }
 
 // ─────────────────────────────────────────────
-// AudioPlayerService: ChangeNotifier that drives
-// all UI state. Delegates actual playback to
-// VibeMusicHandler via audio_service.
+// AudioPlayerService: drives UI state.
+// Initializes AudioService non-blockingly so app
+// opens instantly without black screen.
 // ─────────────────────────────────────────────
 class AudioPlayerService extends ChangeNotifier {
-  late final VibeMusicHandler _handler;
+  final AudioPlayer _fallbackPlayer = AudioPlayer();
+  VibeMusicHandler? _handler;
+  bool _isAudioServiceReady = false;
+
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<dynamic>? _customEventSub;
 
@@ -130,6 +129,8 @@ class AudioPlayerService extends ChangeNotifier {
   Timer? _sleepTimer;
   int _remainingTimerSeconds = 0;
 
+  AudioPlayer get _activePlayer => _handler?.player ?? _fallbackPlayer;
+
   // ── Getters ──────────────────────────────────
   List<SongModel> get playlist => List.unmodifiable(_playlist);
   int get currentIndex => _currentIndex;
@@ -138,62 +139,73 @@ class AudioPlayerService extends ChangeNotifier {
           ? _playlist[_currentIndex]
           : null;
 
-  bool get isPlaying => _handler.player.playing;
+  bool get isPlaying => _activePlayer.playing;
   bool get isShuffleEnabled => _isShuffleEnabled;
   CustomLoopMode get loopMode => _loopMode;
   int get remainingTimerSeconds => _remainingTimerSeconds;
   bool get isTimerActive => _sleepTimer != null && _sleepTimer!.isActive;
 
-  Stream<Duration> get positionStream => _handler.player.positionStream;
-  Stream<Duration?> get durationStream => _handler.player.durationStream;
-  Stream<PlayerState> get playerStateStream => _handler.player.playerStateStream;
+  Stream<Duration> get positionStream => _activePlayer.positionStream;
+  Stream<Duration?> get durationStream => _activePlayer.durationStream;
+  Stream<PlayerState> get playerStateStream => _activePlayer.playerStateStream;
 
   // ── Init ─────────────────────────────────────
-  AudioPlayerService(this._handler) {
-    _initListeners();
+  AudioPlayerService() {
+    _initAudioService();
   }
 
-  static Future<AudioPlayerService> create() async {
-    final handler = await AudioService.init(
-      builder: () => VibeMusicHandler(),
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.vibe.musicplayer.channel.audio',
-        androidNotificationChannelName: 'Vibe Music Playback',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: true,
-        notificationColor: const Color(0xFFE94057),
-      ),
-    );
-    return AudioPlayerService(handler);
+  Future<void> _initAudioService() async {
+    try {
+      _handler = await AudioService.init(
+        builder: () => VibeMusicHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.vibe.musicplayer.channel.audio',
+          androidNotificationChannelName: 'Vibe Music Playback',
+          androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
+          notificationColor: Color(0xFFE94057),
+        ),
+      );
+      _isAudioServiceReady = true;
+      _initListeners();
+    } catch (e) {
+      debugPrint('AudioService init fallback to internal player: $e');
+      _playerStateSub = _fallbackPlayer.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed) {
+          _handleSongCompletion();
+        }
+        notifyListeners();
+      });
+    }
+    notifyListeners();
   }
 
   void _initListeners() {
-    // Track completion → auto-advance
-    _playerStateSub = _handler.player.playerStateStream.listen((state) {
+    if (_handler == null) return;
+
+    _playerStateSub = _handler!.player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _handleSongCompletion();
       }
       notifyListeners();
     });
 
-    // Handle skip commands from notification buttons
-    _customEventSub = _handler.customEvent.listen((event) {
+    _customEventSub = _handler!.customEvent.listen((event) {
       if (event == 'next') next();
       if (event == 'previous') previous();
     });
   }
 
-  // Called from stream listener — intentionally fire-and-forget
   void _handleSongCompletion() {
     if (_playlist.isEmpty) return;
     if (_loopMode == CustomLoopMode.one) {
-      _handler.player.seek(Duration.zero).then((_) => _handler.player.play());
+      _activePlayer.seek(Duration.zero).then((_) => _activePlayer.play());
     } else if (_currentIndex < _playlist.length - 1) {
       playAtIndex(_currentIndex + 1);
     } else if (_loopMode == CustomLoopMode.all) {
       playAtIndex(0);
     } else {
-      _handler.stop();
+      _handler?.stop() ?? _fallbackPlayer.stop();
     }
   }
 
@@ -268,8 +280,13 @@ class AudioPlayerService extends ChangeNotifier {
     _currentIndex = index;
     final song = _playlist[_currentIndex];
     try {
-      await _handler.setMediaItemFromSong(song);
-      await _handler.loadAndPlay(song.path);
+      if (_handler != null) {
+        await _handler!.setMediaItemFromSong(song);
+        await _handler!.loadAndPlay(song.path);
+      } else {
+        await _fallbackPlayer.setFilePath(song.path);
+        await _fallbackPlayer.play();
+      }
     } catch (e) {
       debugPrint('Error playing song: $e');
     }
@@ -282,10 +299,18 @@ class AudioPlayerService extends ChangeNotifier {
       await playAtIndex(0);
       return;
     }
-    if (_handler.player.playing) {
-      await _handler.pause();
+    if (_activePlayer.playing) {
+      if (_handler != null) {
+        await _handler!.pause();
+      } else {
+        await _fallbackPlayer.pause();
+      }
     } else {
-      await _handler.play();
+      if (_handler != null) {
+        await _handler!.play();
+      } else {
+        await _fallbackPlayer.play();
+      }
     }
     notifyListeners();
   }
@@ -300,8 +325,8 @@ class AudioPlayerService extends ChangeNotifier {
 
   Future<void> previous() async {
     if (_playlist.isEmpty) return;
-    if (_handler.player.position.inSeconds > 3) {
-      await _handler.seek(Duration.zero);
+    if (_activePlayer.position.inSeconds > 3) {
+      await seek(Duration.zero);
       return;
     }
     _currentIndex = _isShuffleEnabled
@@ -310,7 +335,13 @@ class AudioPlayerService extends ChangeNotifier {
     await playAtIndex(_currentIndex);
   }
 
-  Future<void> seek(Duration position) => _handler.seek(position);
+  Future<void> seek(Duration position) async {
+    if (_handler != null) {
+      await _handler!.seek(position);
+    } else {
+      await _fallbackPlayer.seek(position);
+    }
+  }
 
   void toggleShuffle() {
     _isShuffleEnabled = !_isShuffleEnabled;
@@ -327,7 +358,7 @@ class AudioPlayerService extends ChangeNotifier {
     final isCurrent = (index == _currentIndex);
     _playlist.removeAt(index);
     if (_playlist.isEmpty) {
-      _handler.stop();
+      _handler?.stop() ?? _fallbackPlayer.stop();
       _currentIndex = -1;
     } else if (isCurrent) {
       _currentIndex = _currentIndex % _playlist.length;
@@ -339,7 +370,7 @@ class AudioPlayerService extends ChangeNotifier {
   }
 
   void clearPlaylist() {
-    _handler.stop();
+    _handler?.stop() ?? _fallbackPlayer.stop();
     _playlist.clear();
     _currentIndex = -1;
     notifyListeners();
@@ -370,7 +401,11 @@ class AudioPlayerService extends ChangeNotifier {
         notifyListeners();
       } else {
         cancelSleepTimer();
-        _handler.pause();
+        if (_handler != null) {
+          _handler!.pause();
+        } else {
+          _fallbackPlayer.pause();
+        }
         notifyListeners();
       }
     });
@@ -389,7 +424,8 @@ class AudioPlayerService extends ChangeNotifier {
     _sleepTimer?.cancel();
     _playerStateSub?.cancel();
     _customEventSub?.cancel();
+    _fallbackPlayer.dispose();
+    _handler?.disposeHandler();
     super.dispose();
-    // Note: _handler and its player are managed by audio_service lifecycle
   }
 }
