@@ -708,7 +708,7 @@ class _PlaylistViewState extends State<PlaylistView>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: isPlayingSong ? const Color(0xFFE94057) : Colors.white90,
+            color: isPlayingSong ? const Color(0xFFE94057) : Colors.white70,
             fontWeight: isPlayingSong ? FontWeight.bold : FontWeight.w500,
             fontSize: 13,
           ),
