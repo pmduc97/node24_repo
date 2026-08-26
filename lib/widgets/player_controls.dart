@@ -24,9 +24,10 @@ class PlayerControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final playerService = Provider.of<AudioPlayerService>(context);
     final currentSong = playerService.currentSong;
+    final isFav = currentSong != null && playerService.isFavorite(currentSong.path);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0xFF161925),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -41,23 +42,23 @@ class PlayerControls extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Currently Playing Info & Sleep Timer Icon
+          // Currently Playing Info & Action Icons (Favorite & Sleep Timer)
           Row(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF8A2387), Color(0xFFE94057), Color(0xFFF27121)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.music_note, color: Colors.white, size: 28),
+                child: const Icon(Icons.music_note, color: Colors.white, size: 26),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,23 +69,35 @@ class PlayerControls extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      currentSong?.artist ?? 'Hãy thêm file nhạc hoặc folder',
+                      currentSong?.artist ?? 'Nhấn "Chọn File" hoặc "Chọn Folder"',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.6),
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
+              // Favorite Heart Button
+              if (currentSong != null)
+                IconButton(
+                  icon: Icon(
+                    isFav ? Icons.favorite : Icons.favorite_border,
+                    color: isFav ? const Color(0xFFE94057) : Colors.white54,
+                    size: 24,
+                  ),
+                  onPressed: () => playerService.toggleFavorite(currentSong.path),
+                  tooltip: isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích',
+                ),
+
               // Sleep Timer Button
               IconButton(
                 icon: Stack(
@@ -94,8 +107,8 @@ class PlayerControls extends StatelessWidget {
                       Icons.timer_outlined,
                       color: playerService.isTimerActive
                           ? const Color(0xFFFF5252)
-                          : Colors.white70,
-                      size: 26,
+                          : Colors.white54,
+                      size: 24,
                     ),
                     if (playerService.isTimerActive)
                       Container(
@@ -121,22 +134,22 @@ class PlayerControls extends StatelessWidget {
 
           if (playerService.isTimerActive)
             Padding(
-              padding: const EdgeInsets.only(top: 8.0),
+              padding: const EdgeInsets.only(top: 6.0),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF5252).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFFF5252).withOpacity(0.4)),
                 ),
                 child: Text(
                   'Hẹn giờ: Tự động tắt sau ${_formatTimerTime(playerService.remainingTimerSeconds)}',
-                  style: const TextStyle(color: Color(0xFFFF5252), fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Color(0xFFFF5252), fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Seekbar & Time indicators
           StreamBuilder<Duration>(
@@ -157,9 +170,9 @@ class PlayerControls extends StatelessWidget {
                     children: [
                       SliderTheme(
                         data: SliderThemeData(
-                          trackHeight: 4,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                          trackHeight: 3,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
                           activeTrackColor: const Color(0xFFE94057),
                           inactiveTrackColor: Colors.white12,
                           thumbColor: const Color(0xFFE94057),
@@ -173,17 +186,17 @@ class PlayerControls extends StatelessWidget {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               _formatDuration(position),
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              style: const TextStyle(color: Colors.white54, fontSize: 11),
                             ),
                             Text(
                               _formatDuration(duration),
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              style: const TextStyle(color: Colors.white54, fontSize: 11),
                             ),
                           ],
                         ),
@@ -195,7 +208,7 @@ class PlayerControls extends StatelessWidget {
             },
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Media Control Buttons (Shuffle, Prev, Play/Pause, Next, Repeat)
           Row(
@@ -208,7 +221,7 @@ class PlayerControls extends StatelessWidget {
                   color: playerService.isShuffleEnabled
                       ? const Color(0xFFE94057)
                       : Colors.white38,
-                  size: 24,
+                  size: 22,
                 ),
                 onPressed: playerService.toggleShuffle,
                 tooltip: 'Trộn bài hát',
@@ -216,7 +229,7 @@ class PlayerControls extends StatelessWidget {
 
               // Previous Track Button
               IconButton(
-                icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 36),
+                icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 34),
                 onPressed: playerService.playlist.isEmpty
                     ? null
                     : () => playerService.previous(),
@@ -234,8 +247,8 @@ class PlayerControls extends StatelessWidget {
                         ? null
                         : () => playerService.playPause(),
                     child: Container(
-                      width: 58,
-                      height: 58,
+                      width: 54,
+                      height: 54,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -246,7 +259,7 @@ class PlayerControls extends StatelessWidget {
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFFE94057).withOpacity(0.4),
-                            blurRadius: 14,
+                            blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -254,7 +267,7 @@ class PlayerControls extends StatelessWidget {
                       child: Icon(
                         isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                         color: Colors.white,
-                        size: 36,
+                        size: 34,
                       ),
                     ),
                   );
@@ -263,7 +276,7 @@ class PlayerControls extends StatelessWidget {
 
               // Next Track Button
               IconButton(
-                icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 36),
+                icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 34),
                 onPressed: playerService.playlist.isEmpty
                     ? null
                     : () => playerService.next(),
@@ -279,7 +292,7 @@ class PlayerControls extends StatelessWidget {
                   color: playerService.loopMode != CustomLoopMode.off
                       ? const Color(0xFFE94057)
                       : Colors.white38,
-                  size: 24,
+                  size: 22,
                 ),
                 onPressed: playerService.toggleLoopMode,
                 tooltip: 'Chế độ lặp lại',

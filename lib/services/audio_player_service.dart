@@ -7,6 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/song_model.dart';
+import '../models/playlist_model.dart';
+import 'playlist_storage_service.dart';
 
 enum CustomLoopMode { off, all, one }
 
@@ -111,11 +113,11 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 // ─────────────────────────────────────────────
 // AudioPlayerService: drives UI state with
 // ZERO-FREEZE non-blocking async execution.
+// Includes Playlists & Favorites management.
 // ─────────────────────────────────────────────
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _fallbackPlayer = AudioPlayer();
   VibeMusicHandler? _handler;
-  bool _isAudioServiceReady = false;
   bool _isScanning = false;
 
   StreamSubscription<PlayerState>? _playerStateSub;
@@ -128,6 +130,10 @@ class AudioPlayerService extends ChangeNotifier {
 
   Timer? _sleepTimer;
   int _remainingTimerSeconds = 0;
+
+  // Favorites & Playlists Persistence
+  Set<String> _favoritePaths = {};
+  List<PlaylistModel> _customPlaylists = [];
 
   static const Set<String> _audioExtensions = {
     '.mp3',
@@ -147,6 +153,12 @@ class AudioPlayerService extends ChangeNotifier {
   List<SongModel> get playlist => List.unmodifiable(_playlist);
   int get currentIndex => _currentIndex;
   bool get isScanning => _isScanning;
+  Set<String> get favoritePaths => Set.unmodifiable(_favoritePaths);
+  List<PlaylistModel> get customPlaylists => List.unmodifiable(_customPlaylists);
+
+  List<SongModel> get favoriteSongs =>
+      _playlist.where((s) => _favoritePaths.contains(s.path)).toList();
+
   SongModel? get currentSong =>
       (_currentIndex >= 0 && _currentIndex < _playlist.length)
           ? _playlist[_currentIndex]
@@ -165,6 +177,13 @@ class AudioPlayerService extends ChangeNotifier {
   // ── Init ─────────────────────────────────────
   AudioPlayerService() {
     _initAudioService();
+    _loadPersistedData();
+  }
+
+  Future<void> _loadPersistedData() async {
+    _favoritePaths = await PlaylistStorageService.loadFavorites();
+    _customPlaylists = await PlaylistStorageService.loadPlaylists();
+    notifyListeners();
   }
 
   Future<void> _initAudioService() async {
@@ -179,7 +198,6 @@ class AudioPlayerService extends ChangeNotifier {
           notificationColor: Color(0xFFE94057),
         ),
       );
-      _isAudioServiceReady = true;
       _initListeners();
     } catch (e) {
       debugPrint('AudioService init fallback to internal player: $e');
@@ -240,7 +258,6 @@ class AudioPlayerService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use FileType.audio to force Android SAF system picker to hide non-audio files
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
         allowMultiple: true,
@@ -306,7 +323,87 @@ class AudioPlayerService extends ChangeNotifier {
     return addedCount;
   }
 
-  // ── Playback (Instant UI Feedback) ─────────────
+  // ── Favorites Management ─────────────────────
+  bool isFavorite(String songPath) => _favoritePaths.contains(songPath);
+
+  void toggleFavorite(String songPath) {
+    if (_favoritePaths.contains(songPath)) {
+      _favoritePaths.remove(songPath);
+    } else {
+      _favoritePaths.add(songPath);
+    }
+    PlaylistStorageService.saveFavorites(_favoritePaths);
+    notifyListeners();
+  }
+
+  // ── Custom Playlists Management ───────────────
+  Future<void> createPlaylist(String name) async {
+    if (name.trim().isEmpty) return;
+    final newPlaylist = PlaylistModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name.trim(),
+      songPaths: [],
+      createdAt: DateTime.now(),
+    );
+    _customPlaylists.add(newPlaylist);
+    await PlaylistStorageService.savePlaylists(_customPlaylists);
+    notifyListeners();
+  }
+
+  Future<void> deletePlaylist(String playlistId) async {
+    _customPlaylists.removeWhere((p) => p.id == playlistId);
+    await PlaylistStorageService.savePlaylists(_customPlaylists);
+    notifyListeners();
+  }
+
+  Future<void> addSongToPlaylist(String playlistId, String songPath) async {
+    final index = _customPlaylists.indexWhere((p) => p.id == playlistId);
+    if (index != -1) {
+      final p = _customPlaylists[index];
+      if (!p.songPaths.contains(songPath)) {
+        final updatedPaths = List<String>.from(p.songPaths)..add(songPath);
+        _customPlaylists[index] = PlaylistModel(
+          id: p.id,
+          name: p.name,
+          songPaths: updatedPaths,
+          createdAt: p.createdAt,
+        );
+        await PlaylistStorageService.savePlaylists(_customPlaylists);
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> removeSongFromPlaylist(String playlistId, String songPath) async {
+    final index = _customPlaylists.indexWhere((p) => p.id == playlistId);
+    if (index != -1) {
+      final p = _customPlaylists[index];
+      final updatedPaths = List<String>.from(p.songPaths)..remove(songPath);
+      _customPlaylists[index] = PlaylistModel(
+        id: p.id,
+        name: p.name,
+        songPaths: updatedPaths,
+        createdAt: p.createdAt,
+      );
+      await PlaylistStorageService.savePlaylists(_customPlaylists);
+      notifyListeners();
+    }
+  }
+
+  List<SongModel> getSongsForPlaylist(PlaylistModel playlistModel) {
+    return _playlist.where((s) => playlistModel.songPaths.contains(s.path)).toList();
+  }
+
+  void playCustomPlaylist(PlaylistModel playlistModel, {int startIndex = 0}) {
+    final songs = getSongsForPlaylist(playlistModel);
+    if (songs.isNotEmpty) {
+      _playlist.clear();
+      _playlist.addAll(songs);
+      playAtIndex(startIndex);
+    }
+  }
+
+  // ── Playback ──────────────────────────────────
   Future<void> playAtIndex(int index) async {
     if (index < 0 || index >= _playlist.length) return;
     _currentIndex = index;
