@@ -27,6 +27,91 @@ class _PlaylistViewState extends State<PlaylistView>
     super.dispose();
   }
 
+  void _showEditSongTitleDialog(BuildContext context, SongModel song) {
+    final titleController = TextEditingController(text: song.title);
+    final artistController = TextEditingController(text: song.artist);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2430),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit, color: Color(0xFFE94057)),
+            SizedBox(width: 10),
+            Text('Đổi Tên Hiển Thị', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Chỉ thay đổi tên hiển thị trong app (Không đổi file thực trên đĩa):',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: titleController,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Tên bài hát',
+                labelStyle: TextStyle(color: Color(0xFFE94057)),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFFE94057)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: artistController,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Tên ca sĩ',
+                labelStyle: TextStyle(color: Color(0xFFF27121)),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFFF27121)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Provider.of<AudioPlayerService>(context, listen: false)
+                  .resetSongDisplayName(song.path);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Khôi Phục Tên Gốc', style: TextStyle(color: Colors.white38, fontSize: 12)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE94057),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final newTitle = titleController.text.trim();
+              final newArtist = artistController.text.trim();
+              if (newTitle.isNotEmpty) {
+                Provider.of<AudioPlayerService>(context, listen: false)
+                    .updateSongDisplayName(song.path, newTitle, newArtist);
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: const Text('Lưu Thay Đổi'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showCreatePlaylistDialog(BuildContext context) {
     final controller = TextEditingController();
     showDialog(
@@ -347,7 +432,7 @@ class _PlaylistViewState extends State<PlaylistView>
                         ),
                         if (playlist.isNotEmpty)
                           const Text(
-                            'Kéo thả để sắp xếp',
+                            'Nhấn giữ để sửa tên | Kéo thả sắp xếp',
                             style: TextStyle(color: Colors.white38, fontSize: 10),
                           ),
                       ],
@@ -675,6 +760,7 @@ class _PlaylistViewState extends State<PlaylistView>
           ],
         ),
         onTap: () => playerService.playAtIndex(index),
+        onLongPress: () => _showEditSongTitleDialog(context, song),
       ),
     );
   }

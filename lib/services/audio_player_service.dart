@@ -113,7 +113,7 @@ class VibeMusicHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 // ─────────────────────────────────────────────
 // AudioPlayerService: drives UI state with
 // ZERO-FREEZE non-blocking async execution.
-// Includes Playlists & Favorites management.
+// Includes Playlists, Favorites & Custom Titles.
 // ─────────────────────────────────────────────
 class AudioPlayerService extends ChangeNotifier {
   final AudioPlayer _fallbackPlayer = AudioPlayer();
@@ -131,9 +131,10 @@ class AudioPlayerService extends ChangeNotifier {
   Timer? _sleepTimer;
   int _remainingTimerSeconds = 0;
 
-  // Favorites & Playlists Persistence
+  // Favorites, Playlists & Custom Titles Persistence
   Set<String> _favoritePaths = {};
   List<PlaylistModel> _customPlaylists = [];
+  Map<String, Map<String, String>> _customSongTitles = {};
 
   static const Set<String> _audioExtensions = {
     '.mp3',
@@ -155,6 +156,7 @@ class AudioPlayerService extends ChangeNotifier {
   bool get isScanning => _isScanning;
   Set<String> get favoritePaths => Set.unmodifiable(_favoritePaths);
   List<PlaylistModel> get customPlaylists => List.unmodifiable(_customPlaylists);
+  Map<String, Map<String, String>> get customSongTitles => Map.unmodifiable(_customSongTitles);
 
   List<SongModel> get favoriteSongs =>
       _playlist.where((s) => _favoritePaths.contains(s.path)).toList();
@@ -183,6 +185,7 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> _loadPersistedData() async {
     _favoritePaths = await PlaylistStorageService.loadFavorites();
     _customPlaylists = await PlaylistStorageService.loadPlaylists();
+    _customSongTitles = await PlaylistStorageService.loadCustomTitles();
     notifyListeners();
   }
 
@@ -251,6 +254,19 @@ class AudioPlayerService extends ChangeNotifier {
     return true;
   }
 
+  // Helper to create SongModel applying custom title mapping if available
+  SongModel _createSongModel(String path) {
+    if (_customSongTitles.containsKey(path)) {
+      final custom = _customSongTitles[path]!;
+      return SongModel.fromFilePath(
+        path,
+        customTitle: custom['title'],
+        customArtist: custom['artist'],
+      );
+    }
+    return SongModel.fromFilePath(path);
+  }
+
   // ── File Picking (STRICT Audio Filter audio/*) ──
   Future<int> pickFiles() async {
     await requestStoragePermission();
@@ -270,7 +286,7 @@ class AudioPlayerService extends ChangeNotifier {
           if (path != null && !existingPaths.contains(path)) {
             final lower = path.toLowerCase();
             if (_audioExtensions.any((ext) => lower.endsWith(ext))) {
-              _playlist.add(SongModel.fromFilePath(path));
+              _playlist.add(_createSongModel(path));
               existingPaths.add(path);
               addedCount++;
             }
@@ -306,7 +322,7 @@ class AudioPlayerService extends ChangeNotifier {
           final lower = path.toLowerCase();
           if (_audioExtensions.any((ext) => lower.endsWith(ext))) {
             if (!existingPaths.contains(path)) {
-              _playlist.add(SongModel.fromFilePath(path));
+              _playlist.add(_createSongModel(path));
               existingPaths.add(path);
               addedCount++;
             }
@@ -321,6 +337,49 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
     }
     return addedCount;
+  }
+
+  // ── Custom Song Title Override Mapping ──────────
+  Future<void> updateSongDisplayName(
+      String songPath, String newTitle, String newArtist) async {
+    _customSongTitles[songPath] = {
+      'title': newTitle.trim(),
+      'artist': newArtist.trim(),
+    };
+    await PlaylistStorageService.saveCustomTitles(_customSongTitles);
+
+    // Update in-memory playlist
+    for (int i = 0; i < _playlist.length; i++) {
+      if (_playlist[i].path == songPath) {
+        _playlist[i] = _playlist[i].copyWith(
+          title: newTitle.trim(),
+          artist: newArtist.trim(),
+        );
+      }
+    }
+
+    // Update background player notification if active
+    if (currentSong?.path == songPath && _handler != null) {
+      await _handler!.setMediaItemFromSong(currentSong!);
+    }
+    notifyListeners();
+  }
+
+  Future<void> resetSongDisplayName(String songPath) async {
+    _customSongTitles.remove(songPath);
+    await PlaylistStorageService.saveCustomTitles(_customSongTitles);
+
+    // Re-create default SongModel
+    for (int i = 0; i < _playlist.length; i++) {
+      if (_playlist[i].path == songPath) {
+        _playlist[i] = SongModel.fromFilePath(songPath);
+      }
+    }
+
+    if (currentSong?.path == songPath && _handler != null) {
+      await _handler!.setMediaItemFromSong(currentSong!);
+    }
+    notifyListeners();
   }
 
   // ── Favorites Management ─────────────────────

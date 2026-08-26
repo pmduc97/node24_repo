@@ -58,4 +58,37 @@ class PlaylistStorageService {
       debugPrint('Error saving playlists: $e');
     }
   }
+
+  // ── Custom Song Titles Mapping Storage ────────
+  static Future<Map<String, Map<String, String>>> loadCustomTitles() async {
+    try {
+      final file = await _getFile('vibe_song_titles.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final Map<String, dynamic> rawMap = json.decode(content);
+        final Map<String, Map<String, String>> result = {};
+        rawMap.forEach((path, val) {
+          if (val is Map) {
+            result[path] = {
+              'title': val['title']?.toString() ?? '',
+              'artist': val['artist']?.toString() ?? '',
+            };
+          }
+        });
+        return result;
+      }
+    } catch (e) {
+      debugPrint('Error loading custom titles: $e');
+    }
+    return {};
+  }
+
+  static Future<void> saveCustomTitles(Map<String, Map<String, String>> titlesMap) async {
+    try {
+      final file = await _getFile('vibe_song_titles.json');
+      await file.writeAsString(json.encode(titlesMap));
+    } catch (e) {
+      debugPrint('Error saving custom titles: $e');
+    }
+  }
 }

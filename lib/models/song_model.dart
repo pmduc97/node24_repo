@@ -15,7 +15,20 @@ class SongModel {
     this.album,
   });
 
-  factory SongModel.fromFilePath(String filePath) {
+  factory SongModel.fromFilePath(
+    String filePath, {
+    String? customTitle,
+    String? customArtist,
+  }) {
+    if (customTitle != null && customTitle.isNotEmpty) {
+      return SongModel(
+        id: filePath,
+        title: customTitle,
+        artist: customArtist ?? 'Unknown Artist',
+        path: filePath,
+      );
+    }
+
     final fileName = filePath.split(RegExp(r'[/\\]')).last;
     final nameWithoutExt = fileName.contains('.')
         ? fileName.substring(0, fileName.lastIndexOf('.'))
@@ -36,6 +49,17 @@ class SongModel {
       title: title,
       artist: artist,
       path: filePath,
+    );
+  }
+
+  SongModel copyWith({String? title, String? artist}) {
+    return SongModel(
+      id: id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      path: path,
+      duration: duration,
+      album: album,
     );
   }
 }
