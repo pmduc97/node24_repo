@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Permission for installing updated APK in-app -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="Vibe Music"
         android:name="${applicationName}"
@@ -41,7 +45,7 @@
             </intent-filter>
         </service>
 
-        <!-- Handle headset media button events (play/pause on earphone button) -->
+        <!-- Handle headset media button events -->
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true">

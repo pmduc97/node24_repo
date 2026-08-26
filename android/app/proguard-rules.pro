@@ -16,6 +16,11 @@
 -keep class com.baseflow.permissionhandler.** { *; }
 -dontwarn com.baseflow.permissionhandler.**
 
+# Keep open_filex
+-keep class com.crazecoder.openfile.** { *; }
+-dontwarn com.crazecoder.openfile.**
+-keep class androidx.core.content.FileProvider { *; }
+
 # Keep MainActivity
 -keep class com.vibe.musicplayer.** { *; }
 

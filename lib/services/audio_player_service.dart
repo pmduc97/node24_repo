@@ -129,6 +129,18 @@ class AudioPlayerService extends ChangeNotifier {
   Timer? _sleepTimer;
   int _remainingTimerSeconds = 0;
 
+  static const Set<String> _audioExtensions = {
+    '.mp3',
+    '.m4a',
+    '.wav',
+    '.flac',
+    '.aac',
+    '.ogg',
+    '.opus',
+    '.wma',
+    '.amr'
+  };
+
   AudioPlayer get _activePlayer => _handler?.player ?? _fallbackPlayer;
 
   // ── Getters ──────────────────────────────────
@@ -221,16 +233,16 @@ class AudioPlayerService extends ChangeNotifier {
     return true;
   }
 
-  // ── File Picking (Async non-blocking) ─────────
+  // ── File Picking (STRICT Audio Filter audio/*) ──
   Future<int> pickFiles() async {
     await requestStoragePermission();
     _isScanning = true;
     notifyListeners();
 
     try {
+      // Use FileType.audio to force Android SAF system picker to hide non-audio files
       FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['mp3', 'm4a', 'wav', 'flac', 'aac', 'ogg'],
+        type: FileType.audio,
         allowMultiple: true,
       );
 
@@ -239,9 +251,12 @@ class AudioPlayerService extends ChangeNotifier {
         final existingPaths = _playlist.map((s) => s.path).toSet();
         for (String? path in result.paths) {
           if (path != null && !existingPaths.contains(path)) {
-            _playlist.add(SongModel.fromFilePath(path));
-            existingPaths.add(path);
-            addedCount++;
+            final lower = path.toLowerCase();
+            if (_audioExtensions.any((ext) => lower.endsWith(ext))) {
+              _playlist.add(SongModel.fromFilePath(path));
+              existingPaths.add(path);
+              addedCount++;
+            }
           }
         }
         if (_currentIndex == -1 && _playlist.isNotEmpty) _currentIndex = 0;
@@ -254,7 +269,7 @@ class AudioPlayerService extends ChangeNotifier {
     return 0;
   }
 
-  // ── Folder Scanning (Async stream, 0 UI freeze) ──
+  // ── Folder Scanning (STRICT Audio Filter & Stream) ──
   Future<int> pickFolder() async {
     await requestStoragePermission();
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
@@ -266,15 +281,13 @@ class AudioPlayerService extends ChangeNotifier {
     int addedCount = 0;
     try {
       final dir = Directory(selectedDirectory);
-      const audioExtensions = ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg'];
       final existingPaths = _playlist.map((s) => s.path).toSet();
 
-      // Use async Stream listing (non-blocking vs listSync)
       await for (final entity in dir.list(recursive: true, followLinks: false)) {
         if (entity is File) {
           final path = entity.path;
           final lower = path.toLowerCase();
-          if (audioExtensions.any((ext) => lower.endsWith(ext))) {
+          if (_audioExtensions.any((ext) => lower.endsWith(ext))) {
             if (!existingPaths.contains(path)) {
               _playlist.add(SongModel.fromFilePath(path));
               existingPaths.add(path);
@@ -297,7 +310,6 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> playAtIndex(int index) async {
     if (index < 0 || index >= _playlist.length) return;
     _currentIndex = index;
-    // Update UI instantly on tap
     notifyListeners();
 
     final song = _playlist[_currentIndex];

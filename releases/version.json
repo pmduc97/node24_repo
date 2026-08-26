@@ -1,0 +1,6 @@
+{
+  "version": "1.0.1",
+  "versionCode": 2,
+  "releaseNotes": "1. Fix lọc duy nhất file âm thanh (MP3, M4A, WAV, FLAC, AAC, OGG) khi chọn File/Folder.\n2. Thêm tính năng Tự động kiểm tra & Cập nhật ứng dụng trực tiếp trong app.",
+  "apkUrl": "https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk"
+}
