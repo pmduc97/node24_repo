@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
-  "versionCode": 3,
-  "releaseNotes": "1. Bổ sung tính năng Tạo Playlist cá nhân & Danh sách Bài hát Yêu thích ❤️.\n2. Cho phép Nhấn giữ (Long-Press) bài hát để đổi tên hiển thị tùy chỉnh.\n3. Tối ưu giao diện danh sách gọn gàng, hiển thị nhiều bài hát hơn trên màn hình.\n4. Lọc chuẩn duy nhất file âm thanh (MP3, M4A, WAV, FLAC, AAC, OGG...).",
+  "version": "1.0.3",
+  "versionCode": 4,
+  "releaseNotes": "1. Nâng cấp Thuật Toán Trộn Bài Thông Minh (Smart Fair Shuffle Deck) - Nghe hết 100% danh sách không bị lặp bài.\n2. Nút Bài Trước (Previous) lùi bài chính xác trong chế độ phát ngẫu nhiên.\n3. Quản lý Playlist cá nhân & Bài hát yêu thích ❤️.\n4. Đổi tên hiển thị bài hát khi Nhấn Giữ (Long-Press).\n5. Lọc chuẩn file âm thanh và giao diện gọn gàng.",
   "apkUrl": "https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk"
 }

@@ -29,8 +29,8 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  static const String currentVersion = '1.0.2';
-  static const int currentVersionCode = 3;
+  static const String currentVersion = '1.0.3';
+  static const int currentVersionCode = 4;
   static const String versionCheckUrl =
       'https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/version.json';
 

@@ -1,7 +1,7 @@
 name: vibe_music_player
 description: A lightweight, beautiful Android Music Player built with Flutter.
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

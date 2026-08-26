@@ -3,7 +3,7 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.27.4-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-3.6.0-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-API_21+-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Version](https://img.shields.io/badge/Version-v1.0.2-E94057?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-v1.0.3-E94057?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 Một ứng dụng nghe nhạc **Offline** hiện đại, mượt mà và siêu nhẹ dành cho hệ điều hành **Android**, được phát triển bằng **Flutter** & **Dart**.
@@ -14,12 +14,13 @@ Một ứng dụng nghe nhạc **Offline** hiện đại, mượt mà và siêu 
 
 Bạn có thể tải ngay file cài đặt APK bản mới nhất đã được build tự động qua GitHub Actions:
 
-👉 **[Tải VibeMusicApp.apk (Bản v1.0.2 Mới Nhất)](https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk)**
+👉 **[Tải VibeMusicApp.apk (Bản v1.0.3 Mới Nhất)](https://raw.githubusercontent.com/pmduc97/node24_repo/my_music_app/releases/VibeMusicApp.apk)**
 
 ---
 
 ## ✨ Tính Năng Nổi Bật (Features)
 
+- 🔀 **Thuật Toán Trộn Bài Thông Minh (Smart Fair Shuffle Deck)**: Phát hết 100% danh sách không bao giờ bị lặp lại bài vừa nghe (Chuẩn iPod / Spotify). Nút *Previous* hỗ trợ lùi bài chuẩn xác trong chế độ ngẫu nhiên.
 - 🎵 **Phát Nhạc Offline Đa Định Dạng**: Hỗ trợ MP3, M4A, WAV, FLAC, AAC, OGG, OPUS, WMA, AMR.
 - 📂 **Lọc Chuẩn File Âm Thanh (`audio/*`)**: Tự động lọc sạch 100% các file ảnh, tài liệu, pdf... chỉ hiển thị file nhạc khi chọn File/Folder.
 - 📂 **Quản Lý Playlist Cá Nhân & Bài Hát Yêu Thích ❤️**: Tạo các Playlist tùy chỉnh (*Nhạc Chill, Tập Gym, Nhạc Trẻ...*), thả tim lưu bài hát yêu thích. Lưu trữ dữ liệu JSON bền vững không mất data khi update app.
@@ -29,7 +30,6 @@ Bạn có thể tải ngay file cài đặt APK bản mới nhất đã được
 - ⚡ **Hiệu Năng Cao & Không Đơ UI (Zero-Freeze)**: Quét thư mục bất đồng bộ dạng Stream (`dir.list`), tra cứu O(1) bằng `Set`, phản hồi cảm ứng 0ms.
 - 🔄 **Tự Động Cập Nhật Trực Tiếp Trong App (In-App Auto Update)**: Tự động kiểm tra phiên bản mới từ GitHub, hiển thị Release Notes và tải/cài đặt APK ngay trong app.
 - ⏰ **Hẹn Giờ Tắt Nhạc (Sleep Timer)**: Cài sẵn các mốc 15, 30, 45, 60 phút hoặc tùy chỉnh số phút theo ý muốn.
-- 🔀 **Chế Độ Phát Linh Hoạt**: Hỗ trợ Trộn bài (Shuffle), Lặp 1 bài (Loop One), Lặp danh sách (Loop All).
 - 🎛️ **Kéo Thả Sắp Xếp Danh Sách**: Dễ dàng di chuyển vị trí các bài hát trong danh sách phát bằng thao tác kéo thả.
 - 📦 **Tối Ưu Dung Lượng & Bảo Mật**: Áp dụng R8 Shrinking, nén tài nguyên, dung lượng APK siêu nhẹ chỉ **~23MB**.
 
